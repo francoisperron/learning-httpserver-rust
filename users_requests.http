@@ -1,0 +1,28 @@
+### POST
+# @no-log
+POST http://127.0.0.1:3000/users
+Content-Type: application/json
+
+{
+  "username": "Luigi"
+}
+
+### PUT
+# @no-log
+PUT http://127.0.0.1:3000/users/289103
+Content-Type: application/json
+
+{
+  "username": "Peach"
+}
+
+### GET all
+# @no-log
+GET http://127.0.0.1:3000/users
+
+### GET by id
+# @no-log
+GET http://127.0.0.1:3000/users/781294
+
+### DELETE by id
+DELETE http://127.0.0.1:3000/users/781294
