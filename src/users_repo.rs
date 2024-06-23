@@ -6,7 +6,7 @@ use crate::user::{Id, User};
 pub trait UsersRepo: Send + Sync {
     fn save_user(&self, user: &User);
 
-    fn delete_user(&self, id: Id) -> Option<User>;
+    fn delete_user(&self, id: Id) -> bool;
 
     fn get_user(&self, id: Id) -> Option<User>;
 
@@ -23,8 +23,8 @@ impl UsersRepo for UsersRepoInMemory {
         self.map.lock().unwrap().insert(user.id, user.clone());
     }
 
-    fn delete_user(&self, id: Id) -> Option<User> {
-        self.map.lock().unwrap().remove(&id)
+    fn delete_user(&self, id: Id) -> bool {
+        self.map.lock().unwrap().remove(&id).is_some()
     }
 
     fn get_user(&self, id: Id) -> Option<User> {

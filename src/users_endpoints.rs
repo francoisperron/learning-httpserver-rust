@@ -29,16 +29,14 @@ pub async fn create_user(State(state): State<UsersState>, Json(request): Json<Cr
 }
 
 pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
-    if state.users_repo.get_user(id).is_none() {
-        StatusCode::NOT_FOUND
-    } else {
-        let mut user = state.users_repo.get_user(id).unwrap().clone();
+    let Some(mut user) = state.users_repo.get_user(id) else {
+        return StatusCode::NOT_FOUND
+    };
 
-        user.username = request.username;
-        state.users_repo.save_user(&user);
+    user.username = request.username;
+    state.users_repo.save_user(&user);
 
-        StatusCode::OK
-    }
+    StatusCode::OK
 }
 
 pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<GetUsersApiResponse>) {
@@ -53,21 +51,18 @@ pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<Get
 }
 
 pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> Response {
-    match state.users_repo.get_user(id) {
-        Some(user) => {
-            let response = GetUserApiResponse { id: user.id, username: user.username };
-            Json(response).into_response()
-        }
-        None => StatusCode::NOT_FOUND.into_response()
-    }
+    let Some(user) = state.users_repo.get_user(id) else {
+        return StatusCode::NOT_FOUND.into_response()
+    };
+
+    let response = GetUserApiResponse { id: user.id, username: user.username };
+    Json(response).into_response()
 }
 
 pub async fn delete_user(State(state): State<UsersState>, Path(id): Path<u64>) -> StatusCode {
-    if state.users_repo.delete_user(id).is_some() {
-        StatusCode::OK
-    } else {
-        StatusCode::NOT_FOUND
-    }
+    let deleted = state.users_repo.delete_user(id);
+
+    if deleted { StatusCode::OK } else { StatusCode::NOT_FOUND }
 }
 
 #[derive(Clone)]
@@ -110,10 +105,8 @@ pub struct GetUserApiResponse {
 
 #[cfg(test)]
 mod tests {
-    use axum::body::Body;
-    use axum::http;
-    use axum::http::Request;
-    use http::StatusCode;
+    use axum::{http, body::Body, http::Request};
+    use http::{header, Method, StatusCode};
     use http_body_util::BodyExt;
     use tokio::net::TcpListener;
     use tower::{Service, ServiceExt};
@@ -127,25 +120,22 @@ mod tests {
 
         let create_user_request_body = serde_json::to_string(&CreateUserApiRequest { username: "mario".to_string() }).unwrap();
         let create_user_request = Request::builder()
-            .method(http::Method::POST)
+            .method(Method::POST)
             .uri("/users")
-            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
             .body(Body::from(create_user_request_body)).unwrap();
 
-        let create_user_response = ServiceExt::<Request<Body>>::ready(&mut app)
-            .await.unwrap().call(create_user_request).await.unwrap();
-
+        let create_user_response = ServiceExt::<Request<Body>>::ready(&mut app).await.unwrap().call(create_user_request).await.unwrap();
         assert_eq!(create_user_response.status(), StatusCode::CREATED);
 
         let create_user_response_body = create_user_response.into_body().collect().await.unwrap().to_bytes();
         let create_user_response_json: CreateUserApiResponse = serde_json::from_slice(&create_user_response_body).unwrap();
 
         let get_user_request = Request::builder()
-            .method(http::Method::GET)
+            .method(Method::GET)
             .uri(format!("/users/{}", create_user_response_json.id))
             .body(Body::empty()).unwrap();
-        let get_user_response = ServiceExt::<Request<Body>>::ready(&mut app)
-            .await.unwrap().call(get_user_request).await.unwrap();
+        let get_user_response = ServiceExt::<Request<Body>>::ready(&mut app).await.unwrap().call(get_user_request).await.unwrap();
 
         assert_eq!(get_user_response.status(), StatusCode::OK);
         let get_user_response_body = get_user_response.into_body().collect().await.unwrap().to_bytes();
@@ -158,14 +148,13 @@ mod tests {
         let listener = TcpListener::bind("0.0.0.0:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move { axum::serve(listener, app()).await.unwrap(); });
-
         let client = hyper_util::client::legacy::Client::builder(hyper_util::rt::TokioExecutor::new()).build_http();
 
         let create_user_request_body = serde_json::to_string(&CreateUserApiRequest { username: "mario".to_string() }).unwrap();
         let create_user_request = Request::builder()
-            .method(http::Method::POST)
+            .method(Method::POST)
             .uri(format!("http://{addr}/users"))
-            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
             .body(Body::from(create_user_request_body)).unwrap();
 
         let create_user_response = client.request(create_user_request).await.unwrap();
@@ -175,7 +164,7 @@ mod tests {
         let create_user_response_json: CreateUserApiResponse = serde_json::from_slice(&create_user_response_body).unwrap();
 
         let get_user_request = Request::builder()
-            .method(http::Method::GET)
+            .method(Method::GET)
             .uri(format!("http://{addr}/users/{}", create_user_response_json.id))
             .body(Body::empty()).unwrap();
 

@@ -17,6 +17,6 @@ async fn main() {
 
 fn app() -> Router {
     let router = Router::new();
-    
+
     add_users_endpoints(router)
 }
