@@ -1,12 +1,13 @@
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
-use axum::extract::{Path, State};
+
 use axum::{Json, Router};
+use axum::extract::{Path, State};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post, put};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use crate::user::{Id, User};
+
+use crate::user::{User, Username};
 use crate::users_repo::{UsersRepo, UsersRepoInMemory};
 
 pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
@@ -19,13 +20,14 @@ pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
         .with_state(UsersState::new())
 }
 
-pub async fn create_user(State(state): State<UsersState>, Json(request): Json<CreateUserApiRequest>) -> (StatusCode, Json<CreateUserApiResponse>) {
-    let id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_micros() as Id;
-    let user = User { id, username: request.username };
+pub async fn create_user(State(state): State<UsersState>, Json(request): Json<CreateUserApiRequest>) -> Response {
+    let Ok(user) = User::new(&request.username) else {
+        return StatusCode::BAD_REQUEST.into_response();
+    };
+
     state.users_repo.save_user(&user);
 
-    let response = CreateUserApiResponse { id: user.id };
-    (StatusCode::CREATED, Json(response))
+    (StatusCode::CREATED, Json(CreateUserApiResponse { id: user.id })).into_response()
 }
 
 pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
@@ -33,7 +35,11 @@ pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, J
         return StatusCode::NOT_FOUND
     };
 
-    user.username = request.username;
+    let Ok(username) = Username::new(&request.username) else {
+        return StatusCode::BAD_REQUEST;
+    };
+
+    user.username = username;
     state.users_repo.save_user(&user);
 
     StatusCode::OK
@@ -43,7 +49,7 @@ pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<Get
     let users = state.users_repo
         .get_users()
         .into_iter()
-        .map(|u| GetUserApiResponse { id: u.id, username: u.username })
+        .map(|u| GetUserApiResponse { id: u.id, username: u.username.to_string() })
         .collect();
 
     let response = GetUsersApiResponse { users };
@@ -55,7 +61,7 @@ pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> R
         return StatusCode::NOT_FOUND.into_response()
     };
 
-    let response = GetUserApiResponse { id: user.id, username: user.username };
+    let response = GetUserApiResponse { id: user.id, username: user.username.to_string() };
     Json(response).into_response()
 }
 
@@ -105,13 +111,13 @@ pub struct GetUserApiResponse {
 
 #[cfg(test)]
 mod tests {
-    use axum::{http, body::Body, http::Request};
+    use axum::{body::Body, http, http::Request};
     use http::{header, Method, StatusCode};
     use http_body_util::BodyExt;
     use tokio::net::TcpListener;
     use tower::{Service, ServiceExt};
-    use crate::app;
 
+    use crate::app;
     use crate::users_endpoints::{CreateUserApiRequest, CreateUserApiResponse, GetUserApiResponse};
 
     #[tokio::test]
