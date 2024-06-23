@@ -4,12 +4,12 @@ POST http://127.0.0.1:3000/users
 Content-Type: application/json
 
 {
-  "username": "Luigi"
+  "username": "Mario"
 }
 
 ### PUT
 # @no-log
-PUT http://127.0.0.1:3000/users/257684
+PUT http://127.0.0.1:3000/users/865729
 Content-Type: application/json
 
 {

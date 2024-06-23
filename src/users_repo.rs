@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::user::{Id, User};
+use crate::id::Id;
+use crate::user::User;
 
 pub trait UsersRepo: Send + Sync {
     fn save_user(&self, user: &User);
@@ -20,7 +21,7 @@ pub struct UsersRepoInMemory {
 
 impl UsersRepo for UsersRepoInMemory {
     fn save_user(&self, user: &User) {
-        self.map.lock().unwrap().insert(user.id, user.clone());
+        self.map.lock().unwrap().insert(user.id.clone(), user.clone());
     }
 
     fn delete_user(&self, id: Id) -> bool {

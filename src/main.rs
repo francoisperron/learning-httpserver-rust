@@ -6,6 +6,8 @@ use crate::users_endpoints::add_users_endpoints;
 mod users_repo;
 mod user;
 mod users_endpoints;
+mod id;
+mod username;
 
 #[tokio::main]
 async fn main() {

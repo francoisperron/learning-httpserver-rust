@@ -7,7 +7,9 @@ use axum::routing::{delete, get, post, put};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::user::{User, Username};
+use crate::id::Id;
+use crate::user::User;
+use crate::username::Username;
 use crate::users_repo::{UsersRepo, UsersRepoInMemory};
 
 pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
@@ -27,11 +29,11 @@ pub async fn create_user(State(state): State<UsersState>, Json(request): Json<Cr
 
     state.users_repo.save_user(&user);
 
-    (StatusCode::CREATED, Json(CreateUserApiResponse { id: user.id })).into_response()
+    (StatusCode::CREATED, Json(CreateUserApiResponse { id: user.id.into() })).into_response()
 }
 
 pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
-    let Some(mut user) = state.users_repo.get_user(id) else {
+    let Some(mut user) = state.users_repo.get_user(Id::from(id)) else {
         return StatusCode::NOT_FOUND
     };
 
@@ -49,7 +51,7 @@ pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<Get
     let users = state.users_repo
         .get_users()
         .into_iter()
-        .map(|u| GetUserApiResponse { id: u.id, username: u.username.to_string() })
+        .map(|u| GetUserApiResponse { id: u.id.into(), username: u.username.into() })
         .collect();
 
     let response = GetUsersApiResponse { users };
@@ -57,16 +59,16 @@ pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<Get
 }
 
 pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> Response {
-    let Some(user) = state.users_repo.get_user(id) else {
+    let Some(user) = state.users_repo.get_user(Id::from(id)) else {
         return StatusCode::NOT_FOUND.into_response()
     };
 
-    let response = GetUserApiResponse { id: user.id, username: user.username.to_string() };
+    let response = GetUserApiResponse { id: user.id.into(), username: user.username.into() };
     Json(response).into_response()
 }
 
 pub async fn delete_user(State(state): State<UsersState>, Path(id): Path<u64>) -> StatusCode {
-    let deleted = state.users_repo.delete_user(id);
+    let deleted = state.users_repo.delete_user(Id::from(id));
 
     if deleted { StatusCode::OK } else { StatusCode::NOT_FOUND }
 }
