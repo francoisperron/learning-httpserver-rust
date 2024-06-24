@@ -11,17 +11,17 @@ use crate::users::user::User;
 use crate::users::username::Username;
 use crate::users::users_repo::{UsersRepo, UsersRepoInMemory};
 
-pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
+pub fn add_users_endpoints(router: Router<UsersState<UsersRepoInMemory>>) -> Router {
     router
         .route("/users", post(create_user))
         .route("/users", get(get_users))
         .route("/users/:id", get(get_user))
         .route("/users/:id", put(update_user))
         .route("/users/:id", delete(delete_user))
-        .with_state(UsersState::new())
+        .with_state(UsersState::in_memory())
 }
 
-pub async fn create_user(State(state): State<UsersState>, Json(request): Json<CreateUserApiRequest>) -> Response {
+pub async fn create_user<R: UsersRepo>(State(state): State<UsersState<R>>, Json(request): Json<CreateUserApiRequest>) -> Response {
     let Ok(user) = User::new(&request.username) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
@@ -31,7 +31,7 @@ pub async fn create_user(State(state): State<UsersState>, Json(request): Json<Cr
     (StatusCode::CREATED, Json(CreateUserApiResponse { id: user.id.into() })).into_response()
 }
 
-pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
+pub async fn update_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
     let Some(mut user) = state.users_repo.get_user(Id::from(id)) else {
         return StatusCode::NOT_FOUND
     };
@@ -46,7 +46,7 @@ pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, J
     StatusCode::OK
 }
 
-pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<GetUsersApiResponse>) {
+pub async fn get_users<R: UsersRepo>(State(state): State<UsersState<R>>) -> (StatusCode, Json<GetUsersApiResponse>) {
     let users = state.users_repo
         .get_users()
         .into_iter()
@@ -57,7 +57,7 @@ pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<Get
     (StatusCode::OK, Json(response))
 }
 
-pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> Response {
+pub async fn get_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>) -> Response {
     let Some(user) = state.users_repo.get_user(Id::from(id)) else {
         return StatusCode::NOT_FOUND.into_response()
     };
@@ -66,19 +66,20 @@ pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> R
     Json(response).into_response()
 }
 
-pub async fn delete_user(State(state): State<UsersState>, Path(id): Path<u64>) -> StatusCode {
+pub async fn delete_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>) -> StatusCode {
     let deleted = state.users_repo.delete_user(Id::from(id));
 
     if deleted { StatusCode::OK } else { StatusCode::NOT_FOUND }
 }
 
-#[derive(Clone)]
-pub struct UsersState {
-    pub users_repo: Arc<dyn UsersRepo>,
+#[derive(Debug, Clone)]
+pub struct UsersState<R: UsersRepo> {
+    users_repo: Arc<R>,
 }
 
-impl UsersState {
-    pub fn new() -> UsersState {
+
+impl UsersState<UsersRepoInMemory> {
+    pub fn in_memory() -> UsersState<UsersRepoInMemory> {
         let users_repo = UsersRepoInMemory::default();
         UsersState { users_repo: Arc::new(users_repo) }
     }

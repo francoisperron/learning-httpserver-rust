@@ -4,7 +4,7 @@ use crate::users::id::Id;
 use crate::users::user::User;
 
 
-pub trait UsersRepo: Send + Sync {
+pub trait UsersRepo: Clone + Send + Sync + 'static {
     fn save_user(&self, user: &User);
 
     fn delete_user(&self, id: Id) -> bool;
@@ -18,6 +18,8 @@ pub trait UsersRepo: Send + Sync {
 pub struct UsersRepoInMemory {
     map: Arc<Mutex<HashMap<Id, User>>>,
 }
+
+
 
 impl UsersRepo for UsersRepoInMemory {
     fn save_user(&self, user: &User) {
