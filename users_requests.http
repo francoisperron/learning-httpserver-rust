@@ -22,7 +22,7 @@ GET http://127.0.0.1:3000/users
 
 ### GET by id
 # @no-log
-GET http://127.0.0.1:3000/users/702500
+GET http://127.0.0.1:3000/users/593699
 
 ### DELETE by id
 DELETE http://127.0.0.1:3000/users/257684

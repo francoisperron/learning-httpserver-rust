@@ -1,9 +1,9 @@
-use derive_more::Display;
+use derive_more::{Display, Error, From};
 
 use crate::id::Id;
-use crate::username::{Username, UsernameError};
+use crate::username::{Username, UsernameEmptyError};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct User {
     pub id: Id,
     pub username: Username,
@@ -17,24 +17,21 @@ impl User {
     }
 }
 
-#[derive(Debug, PartialEq, Display)]
-pub struct UserError(String);
-
-impl From<UsernameError> for UserError {
-    fn from(error: UsernameError) -> Self {
-        UserError(error.to_string())
-    }
+#[derive(Debug, Display, Error, From, PartialEq)]
+pub enum UserError {
+    UsernameEmptyError { source: UsernameEmptyError }
 }
 
 
 #[cfg(test)]
-mod user_tests {
+mod tests {
     use crate::user::{User, UserError};
+    use crate::username::UsernameEmptyError;
 
     #[test]
     fn rejects_user_with_invalid_username() {
         let result = User::new("  ");
 
-        assert_eq!(result, Err(UserError("Username cannot be empty".to_string())));
+        assert_eq!(result, Err(UserError::from(UsernameEmptyError)));
     }
 }

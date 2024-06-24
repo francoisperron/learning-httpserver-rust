@@ -1,41 +1,36 @@
-use derive_more::{Display, Into};
+use derive_more::{Display, Error, Into};
 
-#[derive(Clone, Debug, Display, Into, PartialEq)]
+#[derive(Clone, Debug, Into, PartialEq)]
 pub struct Username(String);
 
 impl Username {
-    pub fn new(raw_username: &str) -> Result<Username, UsernameError> {
+    pub fn new(raw_username: &str) -> Result<Username, UsernameEmptyError> {
         if raw_username.trim().is_empty() {
-            return Err(UsernameError("Username cannot be empty".to_string()));
+            return Err(UsernameEmptyError);
         }
 
         Ok(Username(raw_username.to_string()))
     }
 }
 
-#[derive(Debug, PartialEq, Display)]
-pub struct UsernameError(String);
+#[derive(Debug, Display, Error, PartialEq)]
+pub struct UsernameEmptyError;
 
 
 #[cfg(test)]
-mod username_tests {
-    use crate::username::{Username, UsernameError};
+mod tests {
+    use crate::username::{Username, UsernameEmptyError};
 
     #[test]
     fn rejects_empty_username() {
         let result = Username::new("  ");
 
-        assert_eq!(result, Err(UsernameError("Username cannot be empty".to_string())));
+        assert_eq!(result, Err(UsernameEmptyError));
     }
 
     #[test]
-    fn into_string() {
+    fn converts_into_string() {
         let value: String = Username::new("mario").unwrap().into();
         assert_eq!(value, "mario");
-    }
-
-    #[test]
-    fn formats_to_string() {
-        assert_eq!(Username::new("mario").unwrap().to_string(), "mario");
     }
 }
