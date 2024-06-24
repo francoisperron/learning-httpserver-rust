@@ -6,11 +6,10 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post, put};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-
-use crate::id::Id;
-use crate::user::User;
-use crate::username::Username;
-use crate::users_repo::{UsersRepo, UsersRepoInMemory};
+use crate::users::id::Id;
+use crate::users::user::User;
+use crate::users::username::Username;
+use crate::users::users_repo::{UsersRepo, UsersRepoInMemory};
 
 pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
     router
@@ -120,7 +119,7 @@ mod tests {
     use tower::{Service, ServiceExt};
 
     use crate::app;
-    use crate::users_endpoints::{CreateUserApiRequest, CreateUserApiResponse, GetUserApiResponse};
+    use crate::users::users_endpoints::{CreateUserApiRequest, CreateUserApiResponse, GetUserApiResponse};
 
     #[tokio::test]
     async fn add_and_get_user() {

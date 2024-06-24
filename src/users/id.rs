@@ -18,7 +18,7 @@ impl Default for Id {
 
 #[cfg(test)]
 mod tests {
-    use crate::id::Id;
+    use crate::users::id::Id;
 
     #[test]
     fn creates_with_random_id() {

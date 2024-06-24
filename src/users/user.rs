@@ -1,7 +1,6 @@
 use derive_more::{Display, Error, From};
-
-use crate::id::Id;
-use crate::username::{Username, UsernameEmptyError};
+use crate::users::id::Id;
+use crate::users::username::{Username, UsernameEmptyError};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct User {
@@ -25,8 +24,8 @@ pub enum UserError {
 
 #[cfg(test)]
 mod tests {
-    use crate::user::{User, UserError};
-    use crate::username::UsernameEmptyError;
+    use crate::users::user::{User, UserError};
+    use crate::users::username::UsernameEmptyError;
 
     #[test]
     fn rejects_user_with_invalid_username() {

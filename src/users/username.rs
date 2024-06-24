@@ -19,7 +19,7 @@ pub struct UsernameEmptyError;
 
 #[cfg(test)]
 mod tests {
-    use crate::username::{Username, UsernameEmptyError};
+    use crate::users::username::{Username, UsernameEmptyError};
 
     #[test]
     fn rejects_empty_username() {

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use crate::users::id::Id;
+use crate::users::user::User;
 
-use crate::id::Id;
-use crate::user::User;
 
 pub trait UsersRepo: Send + Sync {
     fn save_user(&self, user: &User);
