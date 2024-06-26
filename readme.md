@@ -1,0 +1,1 @@
+Learning how to build a simple and clean rest api in rust.
