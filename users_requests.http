@@ -9,7 +9,7 @@ Content-Type: application/json
 
 ### PUT
 # @no-log
-PUT http://127.0.0.1:3000/users/428393
+PUT http://127.0.0.1:3000/users/448361
 Content-Type: application/json
 
 {
@@ -22,7 +22,7 @@ GET http://127.0.0.1:3000/users
 
 ### GET by id
 # @no-log
-GET http://127.0.0.1:3000/users/428393
+GET http://127.0.0.1:3000/users/448361
 
 ### DELETE by id
-DELETE http://127.0.0.1:3000/users/257684
+DELETE http://127.0.0.1:3000/users/443562
