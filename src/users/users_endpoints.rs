@@ -9,7 +9,7 @@ use crate::users::user::User;
 use crate::users::username::Username;
 use crate::users::users_repo::{UsersRepo, UsersRepoInMemory};
 
-pub fn add_users_endpoints(router: Router<UsersState<UsersRepoInMemory>>) -> Router {
+pub fn add_users_endpoints(router: Router<UsersState>) -> Router {
     router
         .route("/users", post(create_user))
         .route("/users", get(get_users))
@@ -19,7 +19,7 @@ pub fn add_users_endpoints(router: Router<UsersState<UsersRepoInMemory>>) -> Rou
         .with_state(UsersState::in_memory())
 }
 
-pub async fn create_user<R: UsersRepo>(State(state): State<UsersState<R>>, Json(request): Json<CreateUserApiRequest>) -> Response {
+pub async fn create_user(State(state): State<UsersState>, Json(request): Json<CreateUserApiRequest>) -> Response {
     let Ok(user) = User::new(&request.username) else {
         return StatusCode::BAD_REQUEST.into_response();
     };
@@ -29,7 +29,7 @@ pub async fn create_user<R: UsersRepo>(State(state): State<UsersState<R>>, Json(
     (StatusCode::CREATED, Json(CreateUserApiResponse { id: user.id.into() })).into_response()
 }
 
-pub async fn update_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
+pub async fn update_user(State(state): State<UsersState>, Path(id): Path<u64>, Json(request): Json<UpdateUserApiRequest>) -> StatusCode {
     let Some(mut user) = state.users_repo.get_user(Id::from(id)).await else {
         return StatusCode::NOT_FOUND
     };
@@ -44,7 +44,7 @@ pub async fn update_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(
     StatusCode::OK
 }
 
-pub async fn get_users<R: UsersRepo>(State(state): State<UsersState<R>>) -> (StatusCode, Json<GetUsersApiResponse>) {
+pub async fn get_users(State(state): State<UsersState>) -> (StatusCode, Json<GetUsersApiResponse>) {
     let users = state.users_repo
         .get_users()
         .await
@@ -55,7 +55,7 @@ pub async fn get_users<R: UsersRepo>(State(state): State<UsersState<R>>) -> (Sta
     (StatusCode::OK, Json(GetUsersApiResponse { users }))
 }
 
-pub async fn get_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>) -> Response {
+pub async fn get_user(State(state): State<UsersState>, Path(id): Path<u64>) -> Response {
     let Some(user) = state.users_repo.get_user(Id::from(id)).await else {
         return StatusCode::NOT_FOUND.into_response()
     };
@@ -63,20 +63,20 @@ pub async fn get_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id)
     Json(GetUserApiResponse { id: user.id.into(), username: user.username.into() }).into_response()
 }
 
-pub async fn delete_user<R: UsersRepo>(State(state): State<UsersState<R>>, Path(id): Path<u64>) -> StatusCode {
+pub async fn delete_user(State(state): State<UsersState>, Path(id): Path<u64>) -> StatusCode {
     let deleted = state.users_repo.delete_user(Id::from(id)).await;
 
     if deleted { StatusCode::OK } else { StatusCode::NOT_FOUND }
 }
 
 #[derive(Debug, Clone)]
-pub struct UsersState<R: UsersRepo> {
-    users_repo: Arc<R>,
+pub struct UsersState {
+    pub users_repo: Arc<UsersRepoInMemory>,
 }
 
 
-impl UsersState<UsersRepoInMemory> {
-    pub fn in_memory() -> UsersState<UsersRepoInMemory> {
+impl UsersState {
+    pub fn in_memory() -> UsersState {
         let users_repo = UsersRepoInMemory::default();
         UsersState { users_repo: Arc::new(users_repo) }
     }
@@ -97,12 +97,12 @@ pub struct UpdateUserApiRequest {
     pub username: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GetUsersApiResponse {
     pub users: Vec<GetUserApiResponse>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GetUserApiResponse {
     pub id: u64,
     pub username: String,
@@ -113,7 +113,7 @@ mod tests {
     use axum::http;
     use http::StatusCode;
 
-    use crate::users::users_endpoints::{CreateUserApiRequest, GetUserApiResponse, GetUsersApiResponse, UpdateUserApiRequest};
+    use crate::users::users_endpoints::{CreateUserApiRequest, GetUserApiResponse, UpdateUserApiRequest};
     use crate::users::users_endpoints::test_support::Api;
 
     #[tokio::test]
@@ -161,15 +161,16 @@ mod tests {
         let api = Api::new().await;
 
         let post_1_response = api.post_user(&CreateUserApiRequest { username: "mario".to_string() }).await;
+        let post_1_id = post_1_response.body.unwrap().id;
         let post_2_response = api.post_user(&CreateUserApiRequest { username: "luigi".to_string() }).await;
+        let post_2_id = post_2_response.body.unwrap().id;
 
         let get_response = api.get_users().await;
         assert_eq!(get_response.status_code, StatusCode::OK);
-        let expected_users = vec![
-            GetUserApiResponse { id: post_1_response.body.unwrap().id, username: "mario".to_string() },
-            GetUserApiResponse { id: post_2_response.body.unwrap().id, username: "luigi".to_string() },
-        ];
-        assert_eq!(get_response.body, Some(GetUsersApiResponse { users: expected_users }));
+        
+        let users = get_response.body.unwrap().users;
+        assert_eq!(users.clone().into_iter().find(|u| u.id == post_1_id).unwrap().username, "mario".to_string());
+        assert_eq!(users.into_iter().find(|u| u.id == post_2_id).unwrap().username, "luigi".to_string());
     }
 }
 

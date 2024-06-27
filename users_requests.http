@@ -1,15 +1,15 @@
-### POST
 # @no-log
+
+### POST
 POST http://127.0.0.1:3000/users
 Content-Type: application/json
 
 {
-  "username": "Luigi"
+  "username": "Mario"
 }
 
 ### PUT
-# @no-log
-PUT http://127.0.0.1:3000/users/448361
+PUT http://127.0.0.1:3000/users/774555
 Content-Type: application/json
 
 {
@@ -17,12 +17,10 @@ Content-Type: application/json
 }
 
 ### GET all
-# @no-log
 GET http://127.0.0.1:3000/users
 
 ### GET by id
-# @no-log
-GET http://127.0.0.1:3000/users/448361
+GET http://127.0.0.1:3000/users/774555
 
 ### DELETE by id
-DELETE http://127.0.0.1:3000/users/443562
+DELETE http://127.0.0.1:3000/users/774555

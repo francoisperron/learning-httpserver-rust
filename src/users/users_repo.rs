@@ -12,7 +12,7 @@ pub trait UsersRepo: Clone + Send + Sync + 'static {
 
     fn get_user(&self, id: Id) -> impl Future<Output=Option<User>> + Send;
 
-    fn get_users(&self) -> impl Future<Output=Vec<User>> + Send; // @todo replace by iter
+    fn get_users(&self) -> impl Future<Output=Vec<User>> + Send;
 }
 
 #[derive(Debug, Clone, Default)]
